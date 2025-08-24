@@ -1,13 +1,31 @@
+
 #include "utils.h"
 #include <stdlib.h>
-#include <ctype.h>
+
+static int g_idx = 0;
+
+static int fill_line(int *line, int **grid, int size, int mode) {
+    int j = 0;
+    while (j < size) {
+        if (mode == 0) // Top
+            line[j] = grid[j][g_idx];
+        else if (mode == 1) // Bottom
+            line[j] = grid[size-1-j][g_idx];
+        else if (mode == 2) // Left
+            line[j] = grid[g_idx][j];
+        else if (mode == 3) // Right
+            line[j] = grid[g_idx][size-1-j];
+        j++;
+    }
+    return 0;
+}
 
 int parse_views(const char *str, int *views, int size)
 {
     int i = 0, j = 0;
     int max = size * 4;
     while (str[i]) {
-        if (isdigit(str[i])) {
+        if (str[i] >= '0' && str[i] <= '9') {
             if (j >= max)
                 return 0;
             views[j++] = str[i] - '0';
@@ -22,54 +40,37 @@ int parse_views(const char *str, int *views, int size)
 static int count_visible(int *line, int size)
 {
     int max = 0, count = 0;
-    for (int i = 0; i < size; i++) {
+    int i = 0;
+    while (i < size) {
         if (line[i] > max) {
             max = line[i];
             count++;
         }
+        i++;
     }
     return count;
 }
 
 int check_all_views(int **grid, int *views, int size)
 {
-    int *line = malloc(sizeof(int) * size);
-    // Top views
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++)
-            line[j] = grid[j][i];
-        if (count_visible(line, size) != views[i]) {
-            free(line);
-            return 0;
-        }
-    }
-    // Bottom views
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++)
-            line[j] = grid[size-1-j][i];
-        if (count_visible(line, size) != views[size+i]) {
-            free(line);
-            return 0;
-        }
-    }
-    // Left views
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++)
-            line[j] = grid[i][j];
-        if (count_visible(line, size) != views[size*2+i]) {
-            free(line);
-            return 0;
-        }
-    }
-    // Right views
-    for (int i = 0; i < size; i++) {
-        for (int j = 0; j < size; j++)
-            line[j] = grid[i][size-1-j];
-        if (count_visible(line, size) != views[size*3+i]) {
-            free(line);
-            return 0;
-        }
-    }
-    free(line);
-    return 1;
+	int *line = malloc(sizeof(int) * size);
+	if (!line)
+		return 0;
+	int mode = 0, offset = 0;
+	while (mode < 4) {
+		int i = 0;
+		while (i < size) {
+			g_idx = i;
+			fill_line(line, grid, size, mode);
+			if (count_visible(line, size) != views[offset + i]) {
+				free(line);
+				return 0;
+			}
+			i++;
+		}
+		offset += size;
+		mode++;
+	}
+	free(line);
+	return 1;
 }
